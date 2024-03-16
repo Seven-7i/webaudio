@@ -1,0 +1,15 @@
+.main {
+  border: 1px solid;
+}
+
+.main-left {
+  width: 1000px;
+  height: 100px;
+  background-color: red;
+}
+
+.main-right {
+  width: 100px;
+  height: 100px;
+  background-color: blue;
+}
