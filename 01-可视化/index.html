@@ -7,9 +7,17 @@
   <link rel="stylesheet" href="index.css">
 </head>
 <body>
-  <div class="main h-[500px] w-[100px] flex">
-    <div class="main-left"></div>
-    <div class="main-right"></div>
+  <div class="main w-[90vw] h-[100vh] py-[20px] mx-auto overflow-hidden">
+    <div class="panel">
+      <div class="panel-left">
+        <audio id="audio" controls src="../static/demo.mp3">no support</audio>
+      </div>
+      <div class="separate"></div>
+      <div class="panel-right">
+        <canvas id="canvas" width="512" height="256"></canvas>
+      </div>
+    </div>
   </div>
+  <script src="index.js"></script>
 </body>
 </html>

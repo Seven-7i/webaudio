@@ -1,15 +1,32 @@
-.main {
-  border: 1px solid;
+body {
+  height: 100vh;
+  overflow: hidden;;
 }
 
-.main-left {
-  width: 1000px;
-  height: 100px;
-  background-color: red;
+div {
+  box-sizing: border-box;
 }
 
-.main-right {
-  width: 100px;
+.panel {
+  display: flex;
+}
+
+.panel-left {
+  flex: 1;
   height: 100px;
-  background-color: blue;
+}
+
+.panel-right {
+  flex: 2;
+  min-width: 600px;
+}
+
+.separate {
+  width: 1px;
+  background-color: #ccc;
+  margin: 10px 20px;
+}
+
+#canvas {
+  background-color: black;
 }
