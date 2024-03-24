@@ -30,3 +30,14 @@ div {
 #canvas {
   background-color: black;
 }
+
+.btn {
+  background-color: #165dff;
+  color: #fff;
+  padding: 2px 10px;
+  border-radius: 4px;
+}
+
+.btn:hover {
+  background-color: #165dff6f;
+}
