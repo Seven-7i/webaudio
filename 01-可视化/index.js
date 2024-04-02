@@ -1,12 +1,31 @@
-const audioCtx = new AudioContext();
 
+// 功能按钮
 const btn_play_el = document.getElementById("btn_play");
 const btn_stop_el = document.getElementById("btn_stop");
+const btn_reset_el = document.getElementById("btn_reset");
 const btn_status_el = document.getElementById("btn_status");
+
+// 绘制按钮
+const btn_draw_line_el = document.getElementById("btn_draw_line");
+const btn_draw_bar_el = document.getElementById("btn_draw_bar");
 
 const canvasEl = document.getElementById("canvas");
 /** @type {HTMLCanvasElement} */
 const canvasCtx = canvasEl.getContext("2d");
+
+// 解码后的音频数据
+let decodeBufferData;
+// 创建音频上下文
+let audioCtx = new AudioContext();
+// 音频源节点
+let sourceNode;
+// 分析节点
+let analyserNode;
+// 频率数据数组
+let dataArray;
+
+// 绘制形状，'line'：线条，'bar'：柱状
+let sharp = 'line'
 
 const init = () => {
   // 加载音频文件
@@ -22,30 +41,32 @@ const init = () => {
     })
     .then((decodedBuffer) => {
       btn_play_el.textContent = "解码完成, 配置音轨...";
-      sourceNode = audioCtx.createBufferSource();
-
-      sourceNode.buffer = decodedBuffer;
-
-      analyserNode = audioCtx.createAnalyser();
-      // 设置快速傅里叶变换的大小
-      analyserNode.fftSize = 2048;
-
-      dataArray = new Uint8Array(analyserNode.frequencyBinCount)
-
-      sourceNode.connect(analyserNode).connect(audioCtx.destination);
-      
-      btn_play_el.textContent = "play";
+      decodeBufferData = decodedBuffer;
+      initAudio()
     })
 }
 
-// 音频源节点
-let sourceNode;
-// 分析节点
-let analyserNode;
-// 频率数据数组
-let dataArray;
+const initAudio = () => {
+  if (audioCtx.state !== 'closed') audioCtx.close();
+  canvasCtx.clearRect(0, 0, canvasEl.width, canvasEl.height); // 清空画布
+  if (drawVisual) cancelAnimationFrame(drawVisual);
 
+  audioCtx = new AudioContext()
+  sourceNode = audioCtx.createBufferSource();
+  sourceNode.buffer = decodeBufferData;
 
+  analyserNode = audioCtx.createAnalyser();
+  // 设置快速傅里叶变换的大小
+  analyserNode.fftSize = 512;
+
+  dataArray = new Uint8Array(analyserNode.frequencyBinCount)
+
+  sourceNode.connect(analyserNode).connect(audioCtx.destination);
+  sourceNode.start(0)
+  audioCtx.suspend();
+
+  btn_play_el.textContent = "play";
+}
 
 let drawVisual;
 const draw = () => {
@@ -53,8 +74,21 @@ const draw = () => {
   drawVisual = requestAnimationFrame(draw);
   analyserNode.getByteFrequencyData(dataArray); // 获取频率数据
   canvasCtx.clearRect(0, 0, canvasEl.width, canvasEl.height); // 清空画布
-  canvasCtx.strokeStyle = "#fff";
+  switch (sharp) {
+    case 'line':
+      drawLine();
+      break;
+    case 'bar':
+      drawBar();
+      break;
+    default:
+      drawLine();
+      break;
+  }
+};
 
+const drawLine = () => {
+  canvasCtx.strokeStyle = "#fff";
   canvasCtx.lineWidth = 1;
   canvasCtx.beginPath(); // 开始路径
   canvasCtx.moveTo(0, canvasEl.height / 2);
@@ -63,75 +97,63 @@ const draw = () => {
     canvasCtx.lineTo(i, value);
   }
   canvasCtx.stroke(); // 结束路径
-};
+}
+
+const drawBar = () => {
+  canvasCtx.fillStyle = "red";
+  const len = dataArray.length / 2;
+  const barWidth = canvasEl.width / len;
+  for (let i = 0; i < len; i++) {
+    const data = dataArray[i];
+    const barHeight = data / 255 * canvasEl.height;
+    const x = i * barWidth;
+    const y = canvasEl.height - barHeight;
+    canvasCtx.fillRect(x, y, barWidth - 2, barHeight);
+  }
+}
 
 
 btn_play_el.addEventListener("click", () => {
-  console.log(sourceNode, getIsPlaying())
-  // 
-  if (getIsPlaying()) {
-    sourceNode.stop();
-
-
-  } else {
-    const offset = audioCtx.currentTime % sourceNode.buffer.duration;
-    sourceNode.start(0, offset);
+  if (audioCtx.state === 'running') {
+    audioCtx.suspend();
+    cancelAnimationFrame(drawVisual);
+    btn_play_el.textContent = "continue";
+  } else if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+    draw();
+    btn_play_el.textContent = "pause";
   }
-  draw();
 
 });
 
+
+// #region 功能按钮点击事件处理
 btn_stop_el.addEventListener("click", () => {
   console.log(audioCtx);
   cancelAnimationFrame(drawVisual);
-  audioCtx.close();
+  if (audioCtx.state !== 'closed') audioCtx.close();
+});
+
+btn_reset_el.addEventListener("click", () => {
+  initAudio();
 });
 
 btn_status_el.addEventListener("click", () => {
   console.log(audioCtx)
   console.log(sourceNode)
-  // 假设sourceNode是已经创建并播放的AudioBufferSourceNode对象
-  
+});
+// #endregion
 
+// #region 绘制按钮点击事件处理
+btn_draw_line_el.addEventListener("click", () => {
+  sharp = 'line'
+  draw()
 });
 
+btn_draw_bar_el.addEventListener("click", () => {
+  sharp = 'bar'
+  draw()
+});
+// #endregion
+
 init();
-
-const getIsPlaying = () => {
-  console.log(audioCtx.state )
-  if (audioCtx.state === 'running' && sourceNode && sourceNode.buffer) {
-    if (audioCtx.currentTime > 0 && audioCtx.currentTime < sourceNode.buffer.duration) {
-      return true;
-    }
-  }
-  return false;
-}
-
-// const audioEl = document.getElementById('audio')
-
-// let audioCtx
-
-// audioEl.addEventListener('play', (el) => {
-//   console.log('play', el)
-//   audioCtx = new AudioContext()
-//   const sourceNode = audioCtx.createMediaElementSource(audioEl)
-//   console.log(sourceNode)
-//   console.log(audioCtx)
-// })
-
-// canvasCtx.fillStyle = "red";
-// canvasCtx.fillRect(10, 0, 1, 1);
-// canvasCtx.fillRect(10, 1, 1, 1);
-// canvasCtx.fillRect(10, 2, 1, 1);
-// canvasCtx.fillRect(10, 3, 1, 1);
-// canvasCtx.fillRect(10, 4, 1, 1);
-// canvasCtx.fillRect(10, 5, 1, 1);
-// canvasCtx.fillRect(10, 6, 1, 1);
-// canvasCtx.fillRect(10, 7, 1, 1);
-
-// canvasCtx.strokeStyle = "red";
-// canvasCtx.lineWidth = 5;
-// canvasCtx.beginPath(); // 开始路径
-// canvasCtx.moveTo(0, 0);
-// canvasCtx.bezierCurveTo(50, 50, 200, 100, 200, 50);
-// canvasCtx.stroke(); // 结束路径
